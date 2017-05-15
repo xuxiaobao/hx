@@ -13,9 +13,6 @@ import java.util.Map;
  */
 public abstract class AbstractRecharge {
 
-
-    public abstract Map<String, List> products();
-
     /**
      * 充值接口
      * @param order
