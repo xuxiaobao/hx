@@ -29,12 +29,10 @@ public class ServletOutputStreamCopier  extends ServletOutputStream {
         return copy.toByteArray();
     }
 
-    @Override
     public boolean isReady() {
         return false;
     }
 
-    @Override
     public void setWriteListener(WriteListener listener) {
 
     }

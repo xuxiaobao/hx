@@ -65,7 +65,6 @@ public class HttpClientUtil {
 		Map<String, String> map = new HashMap<String, String>();
 		HttpPost post = new HttpPost(url_str);
 		try {
-			post.setHeader("User-Agent", "agx.ims");
 			post.setHeader("Content-Type", "application/xml");
 			post.setHeader("4GGOGO-Auth-Token", token);
 			post.setHeader("HTTP-X-4GGOGO-Signature", sign);
@@ -109,7 +108,6 @@ public class HttpClientUtil {
 		Map<String, String> map = new HashMap<String, String>();
 		HttpGet get = new HttpGet(url_str);
 		try {
-			get.setHeader("User-Agent", "agx.ims");
 			get.setHeader("Content-Type", "application/xml");
 			get.setHeader("4GGOGO-Auth-Token", token);
 			get.setHeader("HTTP-X-4GGOGO-Signature", sign);
