@@ -106,10 +106,16 @@ public class NeimengRecharge extends AbstractRecharge {
             logger.warn("订购返回结果为null");
             throw new ServiceException(ResultCode.FAILED);
         }
+        query(order);
     }
 
     @Override
     public void queryResult(Order order) {
+
+    }
+
+
+    private void query(Order order) {
         long begin = System.currentTimeMillis();
         if (!checkToken()) {
             authToken();
