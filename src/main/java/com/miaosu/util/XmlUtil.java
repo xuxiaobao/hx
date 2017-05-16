@@ -11,10 +11,9 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/**
- * create by xxb
- */
 public class XmlUtil {
 
 	/**
@@ -128,16 +127,28 @@ public class XmlUtil {
 		/**
 		 * xml转map
 		 */
-		String xml = "<Response><Datetime>2016-03-19T15:43:33.136+08:00</Datetime><Datetime>2016-03-19T15:43:33.136+08:00</Datetime></Response>";
-		Map<String, Object> map = XmlUtil.xmlToMap(xml);
-		System.out.println(map);
-		if (map.get("Response") instanceof Map) {
-			System.out.println("true");
+		String xml = "<Response>\n" +
+				"<Datetime>2017-05-16T22:00:17.563+08:00</Datetime>\n" +
+				"<ChargeData>\n" +
+				"<SerialNum>20170516220015</SerialNum>\n" +
+				"<SystemNum>6270246316476604416</SystemNum>\n" +
+				"</ChargeData>\n" +
+				"</Response>";
+
+		xml = replaceBlank(xml);
+		System.out.println(xml);
+		Document document = DocumentHelper.parseText(xml);
+		Element element = document.getRootElement();
+		String systemNum = element.element("SystemNum").asXML();
+		System.out.println(systemNum);
+	}
+	public static String replaceBlank(String str) {
+		String dest = "";
+		if (str!=null) {
+			Pattern p = Pattern.compile("\\s*|\t|\r|\n");
+			Matcher m = p.matcher(str);
+			dest = m.replaceAll("");
 		}
-		/**
-		 * map转xml
-		 */
-		String s = XmlUtil.mapToXml(map);
-		System.out.println(s);
+		return dest;
 	}
 }
