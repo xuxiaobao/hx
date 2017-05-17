@@ -47,6 +47,8 @@ public class NeimengRecharge extends AbstractRecharge {
 
     @Override
     public void recharge(Order order) {
+        logger.info("开始进行充值：{}", order.getId());
+        long begin = System.currentTimeMillis();
         /*
         鉴权
          */
@@ -92,9 +94,8 @@ public class NeimengRecharge extends AbstractRecharge {
                     Constants.TokenMap.put("ExpiredTime", expiredTime);
                 }
             } catch (Exception ex) {
-
-            } finally {
-                System.out.println("鉴权结束");
+                logger.warn("签名异常:{}", ex);
+                throw new ServiceException(ResultCode.FAILED);
             }
         }
         /*
@@ -102,7 +103,6 @@ public class NeimengRecharge extends AbstractRecharge {
          */
         String systemNum = order.getRechargeId();
         if (StringUtils.isEmpty(systemNum)) {
-            System.out.println("充值开始");
             StringBuilder builder = new StringBuilder();
             Date dt = new Date();
             String dateTime = DateUtil.formatDate(dt);
@@ -118,7 +118,7 @@ public class NeimengRecharge extends AbstractRecharge {
             String param = builder.toString();
             String token = Constants.TokenMap.get("Token");
             String sign = DigestUtils.sha256Hex(param.concat(Constants.AppSecret));
-
+            String resutString = null;
             try {
                 HttpPost post = new HttpPost(Constants.SERVER_URL+"boss/charge.html");
                 post.setHeader("Content-Type", "application/xml");
@@ -128,7 +128,7 @@ public class NeimengRecharge extends AbstractRecharge {
                 CloseableHttpClient httpClient = HttpClients.custom().build();
                 CloseableHttpResponse response = httpClient.execute(post);
                 HttpEntity entity = response.getEntity();
-                String resutString = null;
+
                 if (entity != null) {
                     resutString = EntityUtils.toString(entity);
                     System.out.println("充值返回结果是："+resutString);
@@ -137,15 +137,24 @@ public class NeimengRecharge extends AbstractRecharge {
                     Element chargeData = document.getRootElement().element("ChargeData");
                     systemNum = chargeData.element("SystemNum").getText();
                     if (StringUtils.isEmpty(systemNum)) {
-                        new RuntimeException("充值单号为空");
+                        logger.warn("订购返回流水号为空");
+                        throw new ServiceException(ResultCode.FAILED);
                     }
                     order.setRechargeId(systemNum);
                     abstractOrderService.setRechargeId(order.getId(), systemNum, "neimeng");
+                } else {
+                    logger.warn("订购返回结果为空");
+                    throw new ServiceException(ResultCode.FAILED);
                 }
             } catch (Exception ex) {
-
+                logger.warn("订购失败,exMsg:{}; costTime:{}", ex.getMessage(), (System.currentTimeMillis() - begin));
+                /*
+                设置充值状态为待充值
+                 */
+                abstractOrderService.setToInit(order.getId());
+                throw new ServiceException(ResultCode.FAILED);
             } finally {
-                System.out.println("充值结束");
+                logger.info("订购结束; result:{}; costTime:{}", resutString, (System.currentTimeMillis() - begin));
             }
         }
 
@@ -153,7 +162,7 @@ public class NeimengRecharge extends AbstractRecharge {
         查询结果
          */
         if (true) {
-            System.out.println("查询充值结果");
+            logger.info("查询订购结果开始");
             String status = null;
             String description = null;
             try {
@@ -175,15 +184,19 @@ public class NeimengRecharge extends AbstractRecharge {
                         Element record = document.getRootElement().element("Records").element("Record");
                         status = record.element("Status").getText();
                         description = record.element("Description").getText();
+                    } else {
+                        logger.warn("查询充值结果为空");
+                        throw new ServiceException(ResultCode.FAILED);
                     }
                 } else {
-                    throw new RuntimeException("充值单号为空");
+                    logger.warn("查询充值单号为空");
+                    throw new ServiceException(ResultCode.FAILED);
                 }
             } catch (Exception ex) {
-                
+                logger.warn("查询充值结果失败");
             } finally {
                 abstractOrderService.setToInit(order.getId());
-                System.out.println("查询充值结果结束");
+                logger.info("查询充值结果结束; result:{}; costTime:{}", description, (System.currentTimeMillis() - begin));
             }
             if (status != null) {
                 if ("3".equals(status)) {
@@ -195,7 +208,8 @@ public class NeimengRecharge extends AbstractRecharge {
                     abstractOrderService.setToInit(order.getId());
                 }
             } else {
-                throw new RuntimeException("订单查询充值结果为null");
+                logger.warn("订单查询返回结果为null");
+                throw new ServiceException(ResultCode.FAILED);
             }
         }
 
