@@ -100,8 +100,8 @@ public class NeimengRecharge extends AbstractRecharge {
         /*
         充值
          */
-        String systemNum = null;
-        if (true) {
+        String systemNum = order.getRechargeId();
+        if (StringUtils.isEmpty(systemNum)) {
             System.out.println("充值开始");
             StringBuilder builder = new StringBuilder();
             Date dt = new Date();
@@ -148,11 +148,7 @@ public class NeimengRecharge extends AbstractRecharge {
                 System.out.println("充值结束");
             }
         }
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            throw new ServiceException(ResultCode.FAILED);
-        }
+
         /*
         查询结果
          */
@@ -184,8 +180,9 @@ public class NeimengRecharge extends AbstractRecharge {
                     throw new RuntimeException("充值单号为空");
                 }
             } catch (Exception ex) {
-
+                
             } finally {
+                abstractOrderService.setToInit(order.getId());
                 System.out.println("查询充值结果结束");
             }
             if (status != null) {
@@ -193,8 +190,9 @@ public class NeimengRecharge extends AbstractRecharge {
                     rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), "Y", "订购成功", order.getExternalId());
                 } else if ("4".equals(status)) {
                     rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),description, order.getExternalId());
-                } else {
-                    //正在充值
+                } else if ("1".equals(status) || "2".equals(status)){
+                    //修改充值状态为待充值
+                    abstractOrderService.setToInit(order.getId());
                 }
             } else {
                 throw new RuntimeException("订单查询充值结果为null");
