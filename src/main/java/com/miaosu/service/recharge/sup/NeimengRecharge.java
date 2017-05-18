@@ -140,76 +140,20 @@ public class NeimengRecharge extends AbstractRecharge {
                         logger.warn("订购返回流水号为空");
                         throw new ServiceException(ResultCode.FAILED);
                     }
-                    order.setRechargeId(systemNum);
                     abstractOrderService.setRechargeId(order.getId(), systemNum, "neimeng");
                 } else {
                     logger.warn("订购返回结果为空");
                     throw new ServiceException(ResultCode.FAILED);
                 }
             } catch (Exception ex) {
-                logger.warn("订购失败,exMsg:{}; costTime:{}", ex.getMessage(), (System.currentTimeMillis() - begin));
                 /*
-                设置充值状态为待充值
+                充值失败
                  */
-                abstractOrderService.setToInit(order.getId());
-                throw new ServiceException(ResultCode.FAILED);
+                String failedReason = "充值请求返回结果异常";
+                logger.warn("订购失败,exMsg:{}; costTime:{}", ex.getMessage(), (System.currentTimeMillis() - begin));
+                rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),failedReason, order.getExternalId());
             } finally {
                 logger.info("订购结束; result:{}; costTime:{}", resutString, (System.currentTimeMillis() - begin));
-            }
-        }
-
-        /*
-        查询结果
-         */
-        if (true) {
-            logger.info("查询订购结果开始");
-            String status = null;
-            String description = null;
-            try {
-                if (StringUtils.isNotEmpty(systemNum)) {
-                    String token = Constants.TokenMap.get("Token");
-                    String sign = DigestUtils.sha256Hex(Constants.AppSecret);
-                    HttpGet get = new HttpGet(Constants.SERVER_URL+"chargeRecords/"+systemNum+".html");
-                    get.setHeader("Content-Type", "application/xml;charset=utf-8");
-                    get.setHeader("4GGOGO-Auth-Token", token);
-                    get.setHeader("HTTP-X-4GGOGO-Signature", sign);
-                    CloseableHttpClient httpClient = HttpClients.custom().build();
-                    CloseableHttpResponse response = httpClient.execute(get);
-                    HttpEntity entity = response.getEntity();
-                    if (entity != null) {
-                        String resultString = EntityUtils.toString(entity,"UTF-8");
-                        System.out.println("查询充值返回结果是："+resultString);
-                        resultString = XmlUtil.replaceBlank(resultString);
-                        Document document = DocumentHelper.parseText(resultString);
-                        Element record = document.getRootElement().element("Records").element("Record");
-                        status = record.element("Status").getText();
-                        description = record.element("Description").getText();
-                    } else {
-                        logger.warn("查询充值结果为空");
-                        throw new ServiceException(ResultCode.FAILED);
-                    }
-                } else {
-                    logger.warn("查询充值单号为空");
-                    throw new ServiceException(ResultCode.FAILED);
-                }
-            } catch (Exception ex) {
-                logger.warn("查询充值结果失败");
-            } finally {
-                abstractOrderService.setToInit(order.getId());
-                logger.info("查询充值结果结束; result:{}; costTime:{}", description, (System.currentTimeMillis() - begin));
-            }
-            if (status != null) {
-                if ("3".equals(status)) {
-                    rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), "Y", "订购成功", order.getExternalId());
-                } else if ("4".equals(status)) {
-                    rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),description, order.getExternalId());
-                } else if ("1".equals(status) || "2".equals(status)){
-                    //修改充值状态为待充值
-                    abstractOrderService.setToInit(order.getId());
-                }
-            } else {
-                logger.warn("订单查询返回结果为null");
-                throw new ServiceException(ResultCode.FAILED);
             }
         }
 
@@ -218,6 +162,48 @@ public class NeimengRecharge extends AbstractRecharge {
     @Override
     public void queryResult(Order order) {
 
+        logger.info("查询订购结果开始");
+        String status = null;
+        String description = null;
+        String systemNum = order.getRechargeId();
+        try {
+            String token = Constants.TokenMap.get("Token");
+            String sign = DigestUtils.sha256Hex(Constants.AppSecret);
+            HttpGet get = new HttpGet(Constants.SERVER_URL+"chargeRecords/"+systemNum+".html");
+            get.setHeader("Content-Type", "application/xml;charset=utf-8");
+            get.setHeader("4GGOGO-Auth-Token", token);
+            get.setHeader("HTTP-X-4GGOGO-Signature", sign);
+            CloseableHttpClient httpClient = HttpClients.custom().build();
+            CloseableHttpResponse response = httpClient.execute(get);
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                String resultString = EntityUtils.toString(entity,"UTF-8");
+                System.out.println("查询充值返回结果是："+resultString);
+                resultString = XmlUtil.replaceBlank(resultString);
+                Document document = DocumentHelper.parseText(resultString);
+                Element record = document.getRootElement().element("Records").element("Record");
+                status = record.element("Status").getText();
+                description = record.element("Description").getText();
+            }
+
+        } catch (Exception ex) {
+            logger.warn("查询充值结果失败");
+        } finally {
+            logger.info("查询充值结果结束; result:{}; costTime:{}", description, (System.currentTimeMillis() - begin));
+        }
+        if (status != null) {
+            if ("3".equals(status)) {
+                rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), "Y", "订购成功", order.getExternalId());
+            } else if ("4".equals(status)) {
+                rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),description, order.getExternalId());
+            } else if ("1".equals(status) || "2".equals(status)){
+                //修改充值状态为待充值
+                abstractOrderService.setToInit(order.getId());
+            }
+        } else {
+            logger.warn("订单查询返回结果为null");
+            throw new ServiceException(ResultCode.FAILED);
+        }
     }
 
     @Override
