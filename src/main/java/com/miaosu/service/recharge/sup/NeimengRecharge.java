@@ -3,6 +3,7 @@ package com.miaosu.service.recharge.sup;
 import com.miaosu.base.ResultCode;
 import com.miaosu.base.ServiceException;
 import com.miaosu.model.Order;
+import com.miaosu.model.enums.RechargeState;
 import com.miaosu.service.orders.AbstractOrderService;
 import com.miaosu.service.recharge.AbstractRecharge;
 import com.miaosu.service.recharge.RechargeResult;
@@ -53,7 +54,19 @@ public class NeimengRecharge extends AbstractRecharge {
         鉴权
          */
 
+        boolean ok = true;
         if (true) {
+            String token = Constants.TokenMap.get("Token");
+            String expiredTime = Constants.TokenMap.get("ExpiredTime");
+            if (StringUtils.isNotEmpty(token)) {
+                Date dt = DateUtil.parseDate(expiredTime);
+                long now = System.currentTimeMillis()-1000;
+                if (dt.getTime() - now > 60000) {
+                    ok = false;
+                }
+            }
+        }
+        if (ok) {
             /*
             参数
              */
@@ -141,9 +154,6 @@ public class NeimengRecharge extends AbstractRecharge {
                         throw new ServiceException(ResultCode.FAILED);
                     }
                     abstractOrderService.setRechargeId(order.getId(), systemNum, "neimeng");
-                } else {
-                    logger.warn("订购返回结果为空");
-                    throw new ServiceException(ResultCode.FAILED);
                 }
             } catch (Exception ex) {
                 /*
@@ -161,8 +171,71 @@ public class NeimengRecharge extends AbstractRecharge {
 
     @Override
     public void queryResult(Order order) {
-
+        long begin = System.currentTimeMillis();
         logger.info("查询订购结果开始");
+
+        /*
+        鉴权
+         */
+        boolean ok = true;
+        if (true) {
+            String token = Constants.TokenMap.get("Token");
+            String expiredTime = Constants.TokenMap.get("ExpiredTime");
+            if (StringUtils.isNotEmpty(token)) {
+                Date dt = DateUtil.parseDate(expiredTime);
+                long now = System.currentTimeMillis()-1000;
+                if (dt.getTime() - now > 60000) {
+                    ok = false;
+                }
+            }
+        }
+
+        if (ok) {
+            /*
+            参数
+             */
+            StringBuilder builder = new StringBuilder();
+            String dateTime = DateUtil.formatDate(new Date());
+            String sign = DigestUtils.sha256Hex(Constants.AppKey.concat(dateTime).concat(Constants.AppSecret));
+            builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            builder.append("<Request>");
+            builder.append("<Datetime>").append(dateTime).append("</Datetime>");
+            builder.append("<Authorization>");
+            builder.append("<AppKey>").append(Constants.AppKey).append("</AppKey>");
+            builder.append("<Sign>").append(sign).append("</Sign>");
+            builder.append("</Authorization>");
+            builder.append("</Request>");
+            String param = builder.toString();
+
+            //创建post请求
+            HttpPost post = new HttpPost(Constants.SERVER_URL.concat("auth.html"));
+            post.setHeader("Content-Type", "application/xml");
+            post.setHeader("4GGOGO-Auth-Token", "");
+            post.setHeader("HTTP-X-4GGOGO-Signature", "");
+            post.setEntity(new StringEntity(param, "UTF-8"));
+            String resutString = null;
+            try {
+                CloseableHttpClient httpClient = HttpClients.custom().build();
+                CloseableHttpResponse response = httpClient.execute(post);
+                HttpEntity entity = response.getEntity();
+                if (entity != null) {
+                    resutString = EntityUtils.toString(entity);
+                    System.out.println("鉴权返回结果："+resutString);
+
+                    resutString = XmlUtil.replaceBlank(resutString);
+                    Document document = DocumentHelper.parseText(resutString);
+                    Element root = document.getRootElement().element("Authorization");
+                    String token = root.element("Token").getText();
+                    String expiredTime = root.element("ExpiredTime").getText();
+                    Constants.TokenMap.put("Token", token);
+                    Constants.TokenMap.put("ExpiredTime", expiredTime);
+                }
+            } catch (Exception ex) {
+                logger.warn("签名异常:{}", ex);
+                throw new ServiceException(ResultCode.FAILED);
+            }
+        }
+
         String status = null;
         String description = null;
         String systemNum = order.getRechargeId();
@@ -184,6 +257,8 @@ public class NeimengRecharge extends AbstractRecharge {
                 Element record = document.getRootElement().element("Records").element("Record");
                 status = record.element("Status").getText();
                 description = record.element("Description").getText();
+            } else {
+               throw new ServiceException(ResultCode.FAILED);
             }
 
         } catch (Exception ex) {
@@ -196,9 +271,6 @@ public class NeimengRecharge extends AbstractRecharge {
                 rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), "Y", "订购成功", order.getExternalId());
             } else if ("4".equals(status)) {
                 rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),description, order.getExternalId());
-            } else if ("1".equals(status) || "2".equals(status)){
-                //修改充值状态为待充值
-                abstractOrderService.setToInit(order.getId());
             }
         } else {
             logger.warn("订单查询返回结果为null");
@@ -208,7 +280,29 @@ public class NeimengRecharge extends AbstractRecharge {
 
     @Override
     public void callBack(RechargeResult rechargeResult) {
+        try
+        {
+            // 根据充值单号查询三天内的订单信息
+            Order order = abstractOrderService.findByCreateTimeAfterAndOrderId(
+                    new Date(System.currentTimeMillis() - 3 * 24 * 60 * 60 * 1000), rechargeResult.getOrderId());
 
+            if (order == null)
+            {
+                logger.warn("未找到充值单号为{}的订单", rechargeResult.getRechargeId());
+            }
+            else
+            {
+                if (order.getRechargeState().getOper() == RechargeState.PROCESS.getOper())
+                {
+                    rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), rechargeResult.getCode(),
+                            rechargeResult.getMsg(), order.getExternalId());
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.warn("处理充值结果通知失败：{}， exMsg:{}", ex.getMessage());
+        }
     }
 
 }
