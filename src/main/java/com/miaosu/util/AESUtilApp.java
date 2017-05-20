@@ -1,14 +1,15 @@
 package com.miaosu.util;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 public class AESUtilApp
 {
-	static Logger log = Logger.getLogger(AESUtilApp.class);
+	static Logger log = LoggerFactory.getLogger(AESUtilApp.class);
 
 	public final static String DEFAULT_CHARSET = "UTF-8";
 

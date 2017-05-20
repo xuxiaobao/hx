@@ -1,6 +1,8 @@
 package com.miaosu.util;
 
-import org.apache.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
 import javax.servlet.http.HttpServletRequest;
@@ -28,7 +30,7 @@ public final class HttpUtilApp {
 	/** 读取超时时间 */
 	private static int _readTimeOut_ = 60 * 1000;
 	/** 日志记录对象性*/
-	private static Logger log = Logger.getLogger(HttpUtilApp.class);
+	private static Logger log = LoggerFactory.getLogger(HttpUtilApp.class);
 	/** get请求 */
 	public static String HTTP_GET = "GET";
 	/** post请求 */
