@@ -35,6 +35,8 @@ public class AippRecharge extends AbstractRecharge {
     private String secretKey = "2a4fb82ae84b1e26eb864362e1155fea";
     @Value("${aipp.server}")
     private String SERVER_URL = "http://117.177.222.131:11080";
+    @Value("${aipp.notify}")
+    private String SERVER_NOTIFY;
 
     @Autowired
     private AbstractOrderService abstractOrderService;
@@ -67,7 +69,7 @@ public class AippRecharge extends AbstractRecharge {
 		aippPurchaseRequest.setPhoneNumber(order.getPhone());
 
 		/*回调地址*/
-		aippPurchaseRequest.setNotifyUrl(order.getNotifyUrl());
+		aippPurchaseRequest.setNotifyUrl(SERVER_NOTIFY);
 
         AippRequest request = new AippRequest();
         try {
@@ -111,12 +113,12 @@ public class AippRecharge extends AbstractRecharge {
 
     @Override
     public void queryResult(Order order) {
-        long begin = System.currentTimeMillis();
+        /*long begin = System.currentTimeMillis();
         logger.info("查询充值开始");
 
-        /*
+        *//*
         设置查询参数
-         */
+         *//*
         AippQueryRequest aippQueryRequest = new AippQueryRequest();
         //设置订购方订单号
         aippQueryRequest.setOrderId(order.getId());
@@ -126,13 +128,13 @@ public class AippRecharge extends AbstractRecharge {
         try {
             //请求体json数据
             String dataJson = AESUtilApp.encrypt(JSON.toJSONString(aippQueryRequest), secretKey);
-            /*身份ID*/
+            *//*身份ID*//*
             request.setPartyId(this.partyId);
-            /*data请求体*/
+            *//*data请求体*//*
             request.setData(dataJson);
-			/*请求时间*/
+			*//*请求时间*//*
             request.setTime(DateUtilsApp.getCurrDateTime("yyyyMMddHHmmssSSS"));
-            /*签名*/
+            *//*签名*//*
             //MD5加密
             String md5Str = MD5UtilApp.getSignAndMD5(request.getPartyId(),request.getData(),request.getTime());
             request.setSign(md5Str);
@@ -150,7 +152,7 @@ public class AippRecharge extends AbstractRecharge {
                 throw new ServiceException(ResultCode.FAILED);
             }
             AippQueryResult aippQueryResult = JSON.parseObject(resultString, AippQueryResult.class);
-            /*请求结果*/
+            *//*请求结果*//*
             String status = aippQueryResult.getStatus();
             if ("1".equals(status)) {
                 rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), "Y", "订购成功", order.getExternalId());
@@ -162,7 +164,7 @@ public class AippRecharge extends AbstractRecharge {
             logger.warn("查询充值结果失败");
         } finally {
             logger.info("查询充值结果结束; result:{}; costTime:{}", resultString, (System.currentTimeMillis() - begin));
-        }
+        }*/
 
     }
 

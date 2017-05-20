@@ -5,9 +5,11 @@ import com.alibaba.fastjson.JSONObject;
 import com.miaosu.base.ResultCode;
 import com.miaosu.base.ServiceException;
 import com.miaosu.service.recharge.RechargeResult;
+import com.miaosu.service.recharge.domain.AippNotifyResult;
 import com.miaosu.service.recharge.domain.AippRequest;
 import com.miaosu.service.recharge.sup.AippRecharge;
 import com.miaosu.util.AESUtilApp;
+import com.miaosu.util.MD5UtilApp;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Administrator on 2017/5/20.
@@ -44,32 +50,45 @@ public class AippNotifyController {
     {
         String jsonString = IOUtils.toString(request.getInputStream());
         notifyLog.info("aipp充值结果通知：{}", jsonString);
-
+        Map<String, String> returnMap = new HashMap<>();
+        returnMap.put("status", "1");
+        returnMap.put("resultCode", "00000");
         try {
             AippRequest aippRequest = JSON.parseObject(jsonString, AippRequest.class);
             if (!partyId.equals(aippRequest.getPartyId())) {
                 notifyLog.info("aipp充值结果通知partyId错误：{}", aippRequest.getPartyId());
                 throw new ServiceException(ResultCode.FAILED);
             }
+            String sign = MD5UtilApp.getSignAndMD5(aippRequest.getPartyId(), aippRequest.getData(), aippRequest.getTime());
+            if (sign==null || (!sign.equals(aippRequest.getSign()))) {
+                notifyLog.info("aipp充值结果通知签名错误");
+                throw new ServiceException(ResultCode.FAILED);
+            }
             String jsonData = AESUtilApp.decrypt(aippRequest.getData(), secretKey);
+            List<AippNotifyResult> list = JSON.parseObject(jsonData, List.class);
+            if (list != null) {
 
+                for(AippNotifyResult data : list) {
+
+                    String orderId = data.getOrderId();
+                    String orderStatus = data.getStatus();
+
+                    RechargeResult rechargeResult = new RechargeResult();
+                    rechargeResult.setOrderId(orderId);
+                    rechargeResult.setCode(orderStatus.equals("1") ? "Y" : "N");
+
+                    aippRecharge.callBack(rechargeResult);
+
+                }
+            }
 
         }catch (Exception ex) {
-           //fail
+           returnMap.put("status", "0");
+           returnMap.put("resultCode", "51000");
+           notifyLog.info("aipp充值结果通知异常");
         }
 
-
-        JSONObject json = JSONObject.parseObject(jsonString);
-
-        String orderId = json.getString("channel_order_id");
-        String orderStatus = json.getString("order_status");
-
-        RechargeResult rechargeResult = new RechargeResult();
-        rechargeResult.setOrderId(orderId);
-        rechargeResult.setCode(orderStatus.equals("5") ? "Y" : "N");
-
-        aippRecharge.callBack(rechargeResult);
-        return null;
+        return returnMap;
     }
 
 }
