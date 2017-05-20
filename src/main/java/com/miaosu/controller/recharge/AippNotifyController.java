@@ -50,6 +50,7 @@ public class AippNotifyController {
     {
         String jsonString = IOUtils.toString(request.getInputStream());
         notifyLog.info("aipp充值结果通知：{}", jsonString);
+        System.out.println("aipp充值结果通知："+jsonString);
         Map<String, String> returnMap = new HashMap<>();
         returnMap.put("status", "1");
         returnMap.put("resultCode", "00000");
@@ -65,7 +66,7 @@ public class AippNotifyController {
                 throw new ServiceException(ResultCode.FAILED);
             }
             String jsonData = AESUtilApp.decrypt(aippRequest.getData(), secretKey);
-            List<AippNotifyResult> list = JSON.parseObject(jsonData, List.class);
+            List<AippNotifyResult> list = JSON.parseArray(jsonData, AippNotifyResult.class);
             if (list != null) {
 
                 for(AippNotifyResult data : list) {
