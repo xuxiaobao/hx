@@ -168,7 +168,35 @@ public class AippRecharge extends AbstractRecharge {
 
     @Override
     public void callBack(RechargeResult rechargeResult) {
+        try
+        {
+            // 根据充值单号查询三天内的订单信息
+            Order order = abstractOrderService.findByCreateTimeAfterAndOrderId(
+                    new Date(System.currentTimeMillis() - 3 * 24 * 60 * 60 * 1000), rechargeResult.getOrderId());
 
+            if (order == null)
+            {
+                logger.warn("未找到充值单号为{}的订单", rechargeResult.getRechargeId());
+            }
+            else
+            {
+                if (order.getRechargeState().getOper() == RechargeState.PROCESS.getOper())
+                {
+//					rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), rechargeResult.getCode(),
+//							rechargeResult.getMsg(), order.getExternalId());
+                    if(rechargeResult.getCode().equals("N")){
+                        rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),rechargeResult.getMsg(), order.getExternalId());
+                    }else{
+                        rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), rechargeResult.getCode(),
+                                rechargeResult.getMsg(), order.getExternalId());
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.warn("处理充值结果通知失败：{}， exMsg:{}", ex.getMessage());
+        }
     }
 
 }
