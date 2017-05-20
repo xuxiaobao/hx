@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+    xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans-3.1.xsd    
+                        http://www.springframework.org/schema/context    
+                        http://www.springframework.org/schema/context/spring-context-3.1.xsd    
+                        http://www.springframework.org/schema/util        
+                     http://www.springframework.org/schema/util/spring-util-3.2.xsd  
+                        http://www.springframework.org/schema/task
+                        http://www.springframework.org/schema/task/spring-task-4.0.xsd
+                        http://www.springframework.org/schema/util
+                        http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+	<context:property-placeholder ignore-resource-not-found="true"
+                                  system-properties-mode="OVERRIDE"
+                                  ignore-unresolvable="true"
+                                  file-encoding="utf-8"
+								  location="classpath*:config.properties,
+								  classpath*:jdbc.properties,
+								  file:/home/tomcat/hxinfo/config.properties,
+								  file:/home/tomcat/hxinfo/jdbc.properties" />
+
+
+	<!-- 自动扫描该包，使SpringMVC认为包下用了@controller注解的类是控制器 -->
+	<context:component-scan base-package="com" />
+
+	<task:annotation-driven/>
+
+    <!-- 当队列满时堵塞-->
+    <task:executor id="dispatchTask" pool-size="5-10"
+                   queue-capacity="10000" rejection-policy="CALLER_RUNS"/>
+                   
+   	<!-- <task:executor id="commonExecutor" pool-size="1-2"
+                   queue-capacity="10" rejection-policy="CALLER_RUNS"/> -->
+
+    <bean id="requestFactory" class="org.springframework.http.client.SimpleClientHttpRequestFactory">
+        <property name="readTimeout" value="6000"/>
+        <property name="connectTimeout" value="2000"/>
+    </bean>
+
+
+    <!-- rest template -->
+    <bean id="defaultRestTemplate" class="org.springframework.web.client.RestTemplate">
+        <constructor-arg ref="requestFactory"/>
+
+        <property name="messageConverters">
+            <list>
+                <bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter"/>
+                <bean class="org.springframework.http.converter.StringHttpMessageConverter"/>
+                <bean class="org.springframework.http.converter.ResourceHttpMessageConverter"/>
+                <bean class="org.springframework.http.converter.FormHttpMessageConverter"/>
+                <bean class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter"/>
+            </list>
+        </property>
+    </bean>
+
+    <util:map id="supRechargeMap">
+        <entry key="1" value-ref="zhuowangRecharge" />
+        <entry key="7" value-ref="neimengRecharge" />
+        <entry key="10" value-ref="yunmanRecharge" />
+        <entry key="default" value-ref="zhuowangRecharge"/>
+    </util:map>
+</beans>
