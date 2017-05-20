@@ -3,9 +3,12 @@ package com.miaosu.service.recharge.sup;
 import com.alibaba.fastjson.JSON;
 import com.miaosu.base.ResultCode;
 import com.miaosu.base.ServiceException;
+import com.miaosu.mapper.SupMapper;
 import com.miaosu.model.Order;
+import com.miaosu.model.Sup;
 import com.miaosu.model.enums.RechargeState;
 import com.miaosu.service.orders.AbstractOrderService;
+import com.miaosu.service.productsup.ProductSupService;
 import com.miaosu.service.recharge.AbstractRecharge;
 import com.miaosu.service.recharge.RechargeResult;
 import com.miaosu.service.recharge.RechargeService;
@@ -46,6 +49,9 @@ public class AippRecharge extends AbstractRecharge {
     @Autowired
     private RechargeService rechargeService;
 
+    @Autowired
+    private SupMapper supMapper;
+
 
     @Override
     public void recharge(Order order) {
@@ -56,7 +62,8 @@ public class AippRecharge extends AbstractRecharge {
         String secretKey = this.secretKey;
         AippPurchaseRequest aippPurchaseRequest = new AippPurchaseRequest();
         /*协议ID*/
-        aippPurchaseRequest.setProtocolId(order.getSupId());
+        Sup sup = supMapper.selectInfo(order.getSupId());
+        aippPurchaseRequest.setProtocolId(sup.getSupName());
 
 		/*订单号*/
 		aippPurchaseRequest.setOrderId(order.getId());

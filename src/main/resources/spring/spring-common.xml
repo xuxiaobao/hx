@@ -62,7 +62,7 @@
         <entry key="1" value-ref="zhuowangRecharge" />
         <entry key="7" value-ref="neimengRecharge" />
         <entry key="10" value-ref="yunmanRecharge" />
-        <entry key="cg1705191001220000005" value-ref="aippRecharge" />
+        <entry key="11" value-ref="aippRecharge" />
         <entry key="default" value-ref="zhuowangRecharge"/>
     </util:map>
 </beans>
