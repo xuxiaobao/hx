@@ -1,7 +1,6 @@
 package com.miaosu.controller.recharge;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.miaosu.base.ResultCode;
 import com.miaosu.base.ServiceException;
 import com.miaosu.service.recharge.RechargeResult;
@@ -22,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,13 +70,13 @@ public class AippNotifyController {
 
                     String orderId = data.getOrderId();
                     String orderStatus = data.getStatus();
-
+                    String resultDesc = data.getResultDesc();
                     RechargeResult rechargeResult = new RechargeResult();
                     rechargeResult.setOrderId(orderId);
                     rechargeResult.setCode(orderStatus.equals("1") ? "Y" : "N");
+                    rechargeResult.setMsg(resultDesc);
 
                     aippRecharge.callBack(rechargeResult);
-
                 }
             }
 

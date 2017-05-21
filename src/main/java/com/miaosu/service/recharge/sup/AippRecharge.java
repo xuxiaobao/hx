@@ -102,7 +102,7 @@ public class AippRecharge extends AbstractRecharge {
             String param = JSON.toJSONString(request);
             resutString = HttpUtilApp.doPost(this.SERVER_URL+"/order/purchase", param);
             System.out.println(resutString);
-            /*if (StringUtils.isEmpty(resutString)) {
+            if (StringUtils.isEmpty(resutString)) {
                 throw new ServiceException(ResultCode.FAILED);
             }
             AippPurchaseResult purchase = JSON.parseObject(resutString, AippPurchaseResult.class);
@@ -111,7 +111,7 @@ public class AippRecharge extends AbstractRecharge {
             } else {
                 failedReason = purchase.getResultDesc();
                 throw new ServiceException(ResultCode.FAILED);
-            }*/
+            }
         } catch (Exception ex) {
             logger.warn("订购失败,exMsg:{}; costTime:{}", ex.getMessage(), (System.currentTimeMillis() - begin));
             rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),failedReason, order.getExternalId());
@@ -188,13 +188,14 @@ public class AippRecharge extends AbstractRecharge {
             if (order == null)
             {
                 logger.warn("未找到充值单号为{}的订单", rechargeResult.getRechargeId());
+                throw new ServiceException(ResultCode.FAILED);
             }
             else
             {
+                int a = order.getRechargeState().getOper();
+                int b = RechargeState.PROCESS.getOper();
                 if (order.getRechargeState().getOper() == RechargeState.PROCESS.getOper())
                 {
-//					rechargeService.rechargeSuccess(order.getId(), order.getUsername(), order.getNotifyUrl(), rechargeResult.getCode(),
-//							rechargeResult.getMsg(), order.getExternalId());
                     if(rechargeResult.getCode().equals("N")){
                         rechargeService.rechargeFailed(order.getId(), order.getUsername(), order.getNotifyUrl(),rechargeResult.getMsg(), order.getExternalId());
                     }else{
@@ -207,6 +208,7 @@ public class AippRecharge extends AbstractRecharge {
         catch (Exception ex)
         {
             logger.warn("处理充值结果通知失败：{}， exMsg:{}", ex.getMessage());
+            throw new ServiceException(ResultCode.FAILED);
         }
     }
 
