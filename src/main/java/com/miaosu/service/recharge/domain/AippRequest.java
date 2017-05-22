@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class AippRequest {
-    private String partId;
+    private String partyId;
     private String data;
     private String time;
     private String sign;
