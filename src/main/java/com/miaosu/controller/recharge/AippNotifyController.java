@@ -51,6 +51,7 @@ public class AippNotifyController {
         Map<String, String> returnMap = new HashMap<>();
         returnMap.put("status", "1");
         returnMap.put("resultCode", "00000");
+        returnMap.put("resultDesc", "");
         try {
             AippRequest aippRequest = JSON.parseObject(jsonString, AippRequest.class);
             if (!partyId.equals(aippRequest.getPartyId())) {
