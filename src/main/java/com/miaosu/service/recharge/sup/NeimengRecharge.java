@@ -96,7 +96,6 @@ public class NeimengRecharge extends AbstractRecharge {
                 HttpEntity entity = response.getEntity();
                 if (entity != null) {
                     resutString = EntityUtils.toString(entity);
-                    System.out.println("鉴权返回结果："+resutString);
 
                     resutString = XmlUtil.replaceBlank(resutString);
                     Document document = DocumentHelper.parseText(resutString);
@@ -144,7 +143,6 @@ public class NeimengRecharge extends AbstractRecharge {
 
                 if (entity != null) {
                     resutString = EntityUtils.toString(entity);
-                    System.out.println("充值返回结果是："+resutString);
                     resutString = XmlUtil.replaceBlank(resutString);
                     Document document = DocumentHelper.parseText(resutString);
                     Element chargeData = document.getRootElement().element("ChargeData");
@@ -220,7 +218,6 @@ public class NeimengRecharge extends AbstractRecharge {
                 HttpEntity entity = response.getEntity();
                 if (entity != null) {
                     resutString = EntityUtils.toString(entity);
-                    System.out.println("鉴权返回结果："+resutString);
 
                     resutString = XmlUtil.replaceBlank(resutString);
                     Document document = DocumentHelper.parseText(resutString);
@@ -251,7 +248,6 @@ public class NeimengRecharge extends AbstractRecharge {
             HttpEntity entity = response.getEntity();
             if (entity != null) {
                 String resultString = EntityUtils.toString(entity,"UTF-8");
-                System.out.println("查询充值返回结果是："+resultString);
                 resultString = XmlUtil.replaceBlank(resultString);
                 Document document = DocumentHelper.parseText(resultString);
                 Element record = document.getRootElement().element("Records").element("Record");
