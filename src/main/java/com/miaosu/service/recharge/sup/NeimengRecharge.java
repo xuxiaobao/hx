@@ -10,6 +10,7 @@ import com.miaosu.service.recharge.RechargeResult;
 import com.miaosu.service.recharge.RechargeService;
 import com.miaosu.util.Constants;
 import com.miaosu.util.DateUtil;
+import com.miaosu.util.HttpClientUtil;
 import com.miaosu.util.XmlUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -30,6 +31,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by xxb on 2017/5/15.
@@ -54,61 +57,9 @@ public class NeimengRecharge extends AbstractRecharge {
         鉴权
          */
 
-        boolean ok = true;
-        if (true) {
-            String token = Constants.TokenMap.get("Token");
-            String expiredTime = Constants.TokenMap.get("ExpiredTime");
-            if (StringUtils.isNotEmpty(token)) {
-                Date dt = DateUtil.parseDate(expiredTime);
-                long now = System.currentTimeMillis()-1000;
-                if (dt.getTime() - now > 60000) {
-                    ok = false;
-                }
-            }
-        }
+        boolean ok = checkToken();
         if (ok) {
-            /*
-            参数
-             */
-            StringBuilder builder = new StringBuilder();
-            String dateTime = DateUtil.formatDate(new Date());
-            String sign = DigestUtils.sha256Hex(Constants.AppKey.concat(dateTime).concat(Constants.AppSecret));
-            builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-            builder.append("<Request>");
-            builder.append("<Datetime>").append(dateTime).append("</Datetime>");
-            builder.append("<Authorization>");
-            builder.append("<AppKey>").append(Constants.AppKey).append("</AppKey>");
-            builder.append("<Sign>").append(sign).append("</Sign>");
-            builder.append("</Authorization>");
-            builder.append("</Request>");
-            String param = builder.toString();
-
-            //创建post请求
-            HttpPost post = new HttpPost(Constants.SERVER_URL.concat("auth.html"));
-            post.setHeader("Content-Type", "application/xml");
-            post.setHeader("4GGOGO-Auth-Token", "");
-            post.setHeader("HTTP-X-4GGOGO-Signature", "");
-            post.setEntity(new StringEntity(param, "UTF-8"));
-            String resutString = null;
-            try {
-                CloseableHttpClient httpClient = HttpClients.custom().build();
-                CloseableHttpResponse response = httpClient.execute(post);
-                HttpEntity entity = response.getEntity();
-                if (entity != null) {
-                    resutString = EntityUtils.toString(entity);
-
-                    resutString = XmlUtil.replaceBlank(resutString);
-                    Document document = DocumentHelper.parseText(resutString);
-                    Element root = document.getRootElement().element("Authorization");
-                    String token = root.element("Token").getText();
-                    String expiredTime = root.element("ExpiredTime").getText();
-                    Constants.TokenMap.put("Token", token);
-                    Constants.TokenMap.put("ExpiredTime", expiredTime);
-                }
-            } catch (Exception ex) {
-                logger.warn("签名异常:{}", ex);
-                throw new ServiceException(ResultCode.FAILED);
-            }
+            authToken();
         }
         /*
         充值
@@ -131,18 +82,14 @@ public class NeimengRecharge extends AbstractRecharge {
             String token = Constants.TokenMap.get("Token");
             String sign = DigestUtils.sha256Hex(param.concat(Constants.AppSecret));
             String resutString = null;
-            try {
-                HttpPost post = new HttpPost(Constants.SERVER_URL+"boss/charge.html");
-                post.setHeader("Content-Type", "application/xml");
-                post.setHeader("4GGOGO-Auth-Token", token);
-                post.setHeader("HTTP-X-4GGOGO-Signature", sign);
-                post.setEntity(new StringEntity(param, "UTF-8"));
-                CloseableHttpClient httpClient = HttpClients.custom().build();
-                CloseableHttpResponse response = httpClient.execute(post);
-                HttpEntity entity = response.getEntity();
 
-                if (entity != null) {
-                    resutString = EntityUtils.toString(entity);
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put("Content-Type", "application/xml");
+            headers.put("4GGOGO-Auth-Token", token);
+            headers.put("HTTP-X-4GGOGO-Signature", sign);
+            try {
+                resutString = HttpClientUtil.doPost(Constants.SERVER_URL+"boss/charge.html", param, headers);
+                if (StringUtils.isNotEmpty(resutString)) {
                     resutString = XmlUtil.replaceBlank(resutString);
                     Document document = DocumentHelper.parseText(resutString);
                     Element chargeData = document.getRootElement().element("ChargeData");
@@ -152,6 +99,8 @@ public class NeimengRecharge extends AbstractRecharge {
                         throw new ServiceException(ResultCode.FAILED);
                     }
                     abstractOrderService.setRechargeId(order.getId(), systemNum, "neimeng");
+                } else {
+                    throw new ServiceException(ResultCode.FAILED);
                 }
             } catch (Exception ex) {
                 /*
@@ -175,88 +124,32 @@ public class NeimengRecharge extends AbstractRecharge {
         /*
         鉴权
          */
-        boolean ok = true;
-        if (true) {
-            String token = Constants.TokenMap.get("Token");
-            String expiredTime = Constants.TokenMap.get("ExpiredTime");
-            if (StringUtils.isNotEmpty(token)) {
-                Date dt = DateUtil.parseDate(expiredTime);
-                long now = System.currentTimeMillis()-1000;
-                if (dt.getTime() - now > 60000) {
-                    ok = false;
-                }
-            }
-        }
+        boolean ok = checkToken();
 
         if (ok) {
-            /*
-            参数
-             */
-            StringBuilder builder = new StringBuilder();
-            String dateTime = DateUtil.formatDate(new Date());
-            String sign = DigestUtils.sha256Hex(Constants.AppKey.concat(dateTime).concat(Constants.AppSecret));
-            builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-            builder.append("<Request>");
-            builder.append("<Datetime>").append(dateTime).append("</Datetime>");
-            builder.append("<Authorization>");
-            builder.append("<AppKey>").append(Constants.AppKey).append("</AppKey>");
-            builder.append("<Sign>").append(sign).append("</Sign>");
-            builder.append("</Authorization>");
-            builder.append("</Request>");
-            String param = builder.toString();
-
-            //创建post请求
-            HttpPost post = new HttpPost(Constants.SERVER_URL.concat("auth.html"));
-            post.setHeader("Content-Type", "application/xml");
-            post.setHeader("4GGOGO-Auth-Token", "");
-            post.setHeader("HTTP-X-4GGOGO-Signature", "");
-            post.setEntity(new StringEntity(param, "UTF-8"));
-            String resutString = null;
-            try {
-                CloseableHttpClient httpClient = HttpClients.custom().build();
-                CloseableHttpResponse response = httpClient.execute(post);
-                HttpEntity entity = response.getEntity();
-                if (entity != null) {
-                    resutString = EntityUtils.toString(entity);
-
-                    resutString = XmlUtil.replaceBlank(resutString);
-                    Document document = DocumentHelper.parseText(resutString);
-                    Element root = document.getRootElement().element("Authorization");
-                    String token = root.element("Token").getText();
-                    String expiredTime = root.element("ExpiredTime").getText();
-                    Constants.TokenMap.put("Token", token);
-                    Constants.TokenMap.put("ExpiredTime", expiredTime);
-                }
-            } catch (Exception ex) {
-                logger.warn("签名异常:{}", ex);
-                throw new ServiceException(ResultCode.FAILED);
-            }
+           authToken();
         }
 
         String status = null;
         String description = null;
         String systemNum = order.getRechargeId();
+        String token = Constants.TokenMap.get("Token");
+        String sign = DigestUtils.sha256Hex(Constants.AppSecret);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/xml;charset=utf-8");
+        headers.put("4GGOGO-Auth-Token", token);
+        headers.put("HTTP-X-4GGOGO-Signature", sign);
         try {
-            String token = Constants.TokenMap.get("Token");
-            String sign = DigestUtils.sha256Hex(Constants.AppSecret);
-            HttpGet get = new HttpGet(Constants.SERVER_URL+"chargeRecords/"+systemNum+".html");
-            get.setHeader("Content-Type", "application/xml;charset=utf-8");
-            get.setHeader("4GGOGO-Auth-Token", token);
-            get.setHeader("HTTP-X-4GGOGO-Signature", sign);
-            CloseableHttpClient httpClient = HttpClients.custom().build();
-            CloseableHttpResponse response = httpClient.execute(get);
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                String resultString = EntityUtils.toString(entity,"UTF-8");
+            String resultString = HttpClientUtil.doGet(Constants.SERVER_URL+"chargeRecords/"+systemNum+".html", headers);
+            if (StringUtils.isNotEmpty(resultString)) {
                 resultString = XmlUtil.replaceBlank(resultString);
                 Document document = DocumentHelper.parseText(resultString);
                 Element record = document.getRootElement().element("Records").element("Record");
                 status = record.element("Status").getText();
                 description = record.element("Description").getText();
             } else {
-               throw new ServiceException(ResultCode.FAILED);
+                throw new ServiceException(ResultCode.FAILED);
             }
-
         } catch (Exception ex) {
             logger.warn("查询充值结果失败");
         } finally {
@@ -298,6 +191,59 @@ public class NeimengRecharge extends AbstractRecharge {
         catch (Exception ex)
         {
             logger.warn("处理充值结果通知失败：{}， exMsg:{}", ex.getMessage());
+        }
+    }
+
+    public boolean checkToken() {
+        String token = Constants.TokenMap.get("Token");
+        String expiredTime = Constants.TokenMap.get("ExpiredTime");
+        if (StringUtils.isNotEmpty(token)) {
+            Date dt = DateUtil.parseDate(expiredTime);
+            long now = System.currentTimeMillis()-1000;
+            if (dt.getTime() - now > 60000) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void authToken() {
+        /*
+            参数
+             */
+        StringBuilder builder = new StringBuilder();
+        String dateTime = DateUtil.formatDate(new Date());
+        String sign = DigestUtils.sha256Hex(Constants.AppKey.concat(dateTime).concat(Constants.AppSecret));
+        builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+        builder.append("<Request>");
+        builder.append("<Datetime>").append(dateTime).append("</Datetime>");
+        builder.append("<Authorization>");
+        builder.append("<AppKey>").append(Constants.AppKey).append("</AppKey>");
+        builder.append("<Sign>").append(sign).append("</Sign>");
+        builder.append("</Authorization>");
+        builder.append("</Request>");
+        String param = builder.toString();
+
+        //创建post请求
+        Map<String, String> headers = new HashMap<String, String>();
+        headers.put("Content-Type", "application/xml");
+        String resutString = null;
+        try {
+            resutString = HttpClientUtil.doPost(Constants.SERVER_URL.concat("auth.html"), param, headers);
+            if (StringUtils.isNotEmpty(resutString)) {
+                resutString = XmlUtil.replaceBlank(resutString);
+                Document document = DocumentHelper.parseText(resutString);
+                Element root = document.getRootElement().element("Authorization");
+                String token = root.element("Token").getText();
+                String expiredTime = root.element("ExpiredTime").getText();
+                Constants.TokenMap.put("Token", token);
+                Constants.TokenMap.put("ExpiredTime", expiredTime);
+            } else {
+                throw new ServiceException(ResultCode.FAILED);
+            }
+        } catch (Exception ex) {
+            logger.warn("签名异常:{}", ex);
+            throw new ServiceException(ResultCode.FAILED);
         }
     }
 
